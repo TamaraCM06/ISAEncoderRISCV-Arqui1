@@ -131,39 +131,27 @@ def encode_instruction(instruction: str) -> int:
         imm = int(tokens[3], 0) & 0xFFF  # Inmediato 12 bits
         word = (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
 
-    elif formato == "I_carga":
-        # Direccionamiento con desplazamiento: op rd, imm(rs1)
-        rd = parse_reg(tokens[1])
-        match = re.match(r"^([^\(].)\(([^\)].)\)$", tokens[2])
-        if not match:
-            raise ValueError(
-                f"Sintaxis inválida para carga: '{tokens[2]}'. Esperado: imm(rs1)"
-            )
-        imm = int(match.group(1), 0) & 0xFFF
-        rs1 = parse_reg(match.group(2))
-        word = (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
-    elif formato == "S":
-        # Direccionamiento con desplazamiento: op rs2, imm(rs1)
-        rs2 = parse_reg(tokens[1])
-        match = re.match(r"^([^\(].)\(([^\)].)\)$", tokens[2])
-        if not match:
-            raise ValueError(
-                f"Sintaxis inválida para store: '{tokens[2]}'. Esperado: imm(rs1)"
-            )
-        imm = int(match.group(1), 0) & 0xFFF
-        rs1 = parse_reg(match.group(2))
+    elif formato in ["I_carga", "S"]:
+            # Direccionamiento con desplazamiento: op rd/rs2, imm(rs1)
+            target_token = tokens[2] if len(tokens) > 2 else ""
+            # Si los espacios separaron el offset del paréntesis, unimos tokens restantes
+            # Esto se hace pues la separacion puede causar problemas al parsear instrucciones con espacios entre el inmediato y el rs1
+            full_operand = "".join(tokens[2:])
+            match = re.match(r"^([^\(]+)\(([^\)]+)\)$", full_operand)
+            if not match:
+                raise ValueError(f"Sintaxis inválida: '{full_operand}'. Esperado: imm(rs1)")
+            
+            imm = int(match.group(1), 0) & 0xFFF
+            rs1 = parse_reg(match.group(2))
 
-        imm_11_5 = (imm >> 5) & 0x7F
-        imm_4_0 = imm & 0x1F
-
-        word = (
-            (imm_11_5 << 25)
-            | (rs2 << 20)
-            | (rs1 << 15)
-            | (funct3 << 12)
-            | (imm_4_0 << 7)
-            | opcode
-        )
+            if formato == "I_carga":
+                rd = parse_reg(tokens[1])
+                word = (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
+            else:  # Formato S
+                rs2 = parse_reg(tokens[1])
+                imm_11_5 = (imm >> 5) & 0x7F
+                imm_4_0 = imm & 0x1F
+                word = (imm_11_5 << 25) | (rs2 << 20) | (rs1 << 15) | (funct3 << 12) | (imm_4_0 << 7) | opcode
 
     elif formato == "B":
         # Formato: op rs1, rs2, imm
