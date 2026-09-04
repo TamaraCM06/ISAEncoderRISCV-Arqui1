@@ -247,8 +247,36 @@ def explain_instruction(instruction: str, word: int) -> str:
 
     output.append(f"{mnemonico}: {prosa}\n")
 
-    output.append(f"Formato  : Tipo {formato.replace('_LOAD', '').replace('_aritmetico', '').replace('_carga', '')}")
+    output.append(f"Formato  : Tipo {formato}")
     output.append(f"Binario  : {bits}\n")
+
+    output.append("Explicacion de los campos en el binario:")
+    output.append("  * opcode : Identificador principal de la instrucción y su formato en la ISA RISC-V.")
+    
+    if formato == "R":
+        output.append("  * rd     : Registro destino donde se almacenará el resultado de la operación.")
+        output.append("  * funct3 : Selector de sub-operación (3 bits) que diferencia tipos de operaciones aritméticas/lógicas.")
+        output.append("  * rs1    : Primer registro fuente que contiene el primer operando.")
+        output.append("  * rs2    : Segundo registro fuente que contiene el segundo operando.")
+        output.append("  * funct7 : Selector de extensión (7 bits) que distingue variantes de la instrucción (ej. ADD vs SUB).\n")
+
+    elif formato in ["I_aritmetico", "I_carga"]:
+        output.append("  * rd     : Registro destino donde se guardará el resultado o la carga desde memoria.")
+        output.append("  * funct3 : Selector de sub-operación (3 bits) para el tipo de operación o tamaño de carga (byte/palabra).")
+        output.append("  * rs1    : Registro fuente base sobre el cual se aplica la operación o el cálculo de dirección de memoria.")
+        output.append("  * imm    : Valor inmediato constante (12 bits con signo) para la operación o desplazamiento de memoria.\n")
+
+    elif formato == "S":
+        output.append("  * imm    : Desplazamiento constante (12 bits con signo) dividido en partes alta [11:5] y baja [4:0].")
+        output.append("  * funct3 : Selector del tamaño de dato a almacenar en memoria (byte o palabra de 32 bits).")
+        output.append("  * rs1    : Registro fuente base que contiene la dirección de memoria inicial.")
+        output.append("  * rs2    : Registro fuente que contiene el dato que será escrito en la memoria.\n")
+
+    elif formato == "B":
+        output.append("  * imm    : Desplazamiento relativo al PC (13 bits con signo, bit 0 implícito en 0) fragmentado en la instrucción.")
+        output.append("  * funct3 : Selector de la condición de salto (igualdad == o desigualdad !=).")
+        output.append("  * rs1    : Primer registro fuente para la evaluación condicional.")
+        output.append("  * rs2    : Segundo registro fuente para la evaluación condicional.\n")
 
     output.append("Descomposición de Campos:")
 
