@@ -1,22 +1,34 @@
 #!/usr/bin/env python3
-"""
-Esqueleto del Codificador Educativo de Instrucciones RISC-V.
-CE4301 Arquitectura de Computadores I — Proyecto Individual — 2026-II
 
-Este esqueleto ya implementa el contrato de línea de comandos y de salida
-requerido por la especificación. Usted debe completar las dos funciones
-marcadas con TODO; puede modificar el resto del archivo si lo necesita,
-siempre que se preserve el contrato de invocación y la línea "HEX: 0x...".
-
-No es obligatorio usar este esqueleto ni Python: puede implementar su
-propia herramienta desde cero, en el lenguaje que prefiera, siempre que
-respete el mismo contrato (ver especificación, sección "Modo de operación").
-"""
 import sys
 
 SOPORTADAS = ["add", "sub", "and", "or", "addi", "andi",
               "lw", "lb", "sw", "sb", "beq", "bne"]
 
+# Diccionario de instrucciones soportadas con respectiva informacion
+instrucciones = {
+    # Instrucciones formato R
+    "add": {"formato": "R", "opcode": 0b0110011, "funct3": 0b000, "funct7": 0b0000000},
+    "sub": {"formato": "R", "opcode": 0b0110011, "funct3": 0b000, "funct7": 0b0100000},
+    "and": {"formato": "R", "opcode": 0b0110011, "funct3": 0b111, "funct7": 0b0000000},
+    "or":  {"formato": "R", "opcode": 0b0110011, "funct3": 0b110, "funct7": 0b0000000},
+    
+    # Instrucciones formato I Aritmética 
+    "addi": {"formato": "I_aritmetico", "opcode": 0b0010011, "funct3": 0b000},
+    "andi": {"formato": "I_aritmetico", "opcode": 0b0010011, "funct3": 0b111},
+    
+    # Instrucciones formato I Carga
+    "lw": {"formato": "I_carga", "opcode": 0b0000011, "funct3": 0b010},
+    "lb": {"formato": "I_carga", "opcode": 0b0000011, "funct3": 0b000},
+    
+    # Instrucciones formato S
+    "sw": {"formato": "S", "opcode": 0b0100011, "funct3": 0b010},
+    "sb": {"formato": "S", "opcode": 0b0100011, "funct3": 0b000},
+    
+    # Instrucciones formato B
+    "beq": {"formato": "B", "opcode": 0b1100011, "funct3": 0b000},
+    "bne": {"formato": "B", "opcode": 0b1100011, "funct3": 0b001},
+}
 
 def encode_instruction(instruction: str) -> int:
     """
