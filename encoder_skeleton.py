@@ -134,7 +134,7 @@ def encode_instruction(instruction: str) -> int:
     elif formato == "I_carga":
         # Direccionamiento con desplazamiento: op rd, imm(rs1)
         rd = parse_reg(tokens[1])
-        match = re.match(r"^([^\(]+)\(([^\)]+)\)$", tokens[2])
+        match = re.match(r"^([^\(].)\(([^\)].)\)$", tokens[2])
         if not match:
             raise ValueError(
                 f"Sintaxis inválida para carga: '{tokens[2]}'. Esperado: imm(rs1)"
@@ -145,7 +145,7 @@ def encode_instruction(instruction: str) -> int:
     elif formato == "S":
         # Direccionamiento con desplazamiento: op rs2, imm(rs1)
         rs2 = parse_reg(tokens[1])
-        match = re.match(r"^([^\(]+)\(([^\)]+)\)$", tokens[2])
+        match = re.match(r"^([^\(].)\(([^\)].)\)$", tokens[2])
         if not match:
             raise ValueError(
                 f"Sintaxis inválida para store: '{tokens[2]}'. Esperado: imm(rs1)"
@@ -199,9 +199,147 @@ def explain_instruction(instruction: str, word: int) -> str:
     El formato visual (colores, tabla, arte ASCII, etc.) queda a su
     criterio, siempre que sea claro.
     """
-    # TODO: implementar.
-    raise NotImplementedError("explain_instruction: pendiente de implementar")
+    # Se arma y desarma el resultado binario para demostrar la estructura de la instruccion.
 
+    clean_instr = instruction.strip().replace(",", " ")
+    mnemonico = clean_instr.split()[0].lower()
+    info = instrucciones[mnemonico]
+    formato = info["formato"]
+
+    bits = f"{word:032b}"
+    hex_str = f"0x{word:08x}"
+
+    output = []
+
+    # ExtracciOn de campos según el formato de la instrucciOn
+    opcode = word & 0x7F
+    rd = (word >> 7) & 0x1F
+    funct3 = (word >> 12) & 0x7
+    rs1 = (word >> 15) & 0x1F
+    rs2 = (word >> 20) & 0x1F
+    funct7 = (word >> 25) & 0x7F
+    output.append("")
+    output.append(f"=== Análisis de Instrucción: '{instruction}' ===\n")
+    
+    # EXPLICACION EN PROSA DE CADA INSTRUCCION
+    prosa = ""
+    if formato == "R":
+        operaciones = {"add": "suma el contenido de", "sub": "resta el contenido de", "and": "realiza una operación AND bit a bit entre", "or": "realiza una operación OR bit a bit entre"}
+        prosa = f"Esta instrucción {operaciones[mnemonico]} los registros fuentes x{rs1} y x{rs2}, almacenando el resultado en el registro destino x{rd}."
+
+    elif formato == "I_aritmetico":
+        imm = (word >> 20) & 0xFFF
+        if imm & 0x800: imm -= 0x1000  # Extensión de signo para la prosa
+        operaciones = {"addi": "suma el valor inmediato", "andi": "realiza un AND bit a bit con el inmediato"}
+        prosa = f"Esta instrucción {operaciones[mnemonico]} {imm} al valor del registro fuente x{rs1} y guarda el resultado en el registro destino x{rd}."
+
+    elif formato == "I_carga":
+        imm = (word >> 20) & 0xFFF
+        if imm & 0x800: imm -= 0x1000
+        tam = "una palabra de 32 bits (4 bytes)" if mnemonico == "lw" else "un byte de 8 bits"
+        prosa = f"Esta instrucción carga {tam} desde la memoria (dirección calculada como x{rs1} . {imm}) y la almacena en el registro destino x{rd}."
+
+    elif formato == "S":
+        imm_hi = (word >> 25) & 0x7F
+        imm_lo = (word >> 7) & 0x1F
+        imm = (imm_hi << 5) | imm_lo
+        if imm & 0x800: imm -= 0x1000
+        tam = "una palabra de 32 bits (4 bytes)" if mnemonico == "sw" else "un byte de 8 bits"
+        prosa = f"Esta instrucción almacena el valor presente en el registro fuente x{rs2} en la memoria, en la dirección calculada sumando la base x{rs1} y el desplazamiento {imm}."
+
+    elif formato == "B":
+        imm_12 = (word >> 31) & 0x1
+        imm_10_5 = (word >> 25) & 0x3F
+        imm_4_1 = (word >> 8) & 0x0F
+        imm_11 = (word >> 7) & 0x1
+        imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
+        if imm & 0x1000: imm -= 0x2000
+        cond = "son iguales" if mnemonico == "beq" else "son diferentes"
+        prosa = f"Esta instrucción compara los registros x{rs1} y x{rs2}; si sus valores {cond}, realiza un salto en el flujo del programa con un desplazamiento de {imm} bytes."
+
+    output.append(f"{mnemonico}: {prosa}\n")
+
+    output.append(f"Formato  : Tipo {formato.replace('_LOAD', '').replace('_aritmetico', '').replace('_carga', '')}")
+    output.append(f"Binario  : {bits}\n")
+
+    output.append("Descomposición de Campos:")
+
+    if formato == "R":
+        output.append(f"  * funct7 (31-25) : 0x{funct7:02x} ({bits[0:7]})")
+        output.append(f"  * rs2    (24-20) : x{rs2} ({bits[7:12]})")
+        output.append(f"  * rs1    (19-15) : x{rs1} ({bits[12:17]})")
+        output.append(f"  * funct3 (14-12) : 0x{funct3:x} ({bits[17:20]})")
+        output.append(f"  * rd     (11-7)  : x{rd} ({bits[20:25]})")
+        output.append(f"  * opcode (6-0)   : 0x{opcode:02x} ({bits[25:32]})\n")
+
+        output.append(".---------.----------.-------.-------.--------.-------.---------.")
+        output.append("| Formato |  31-25   | 24-20 | 19-15 | 14-12  | 11-7  |   6-0   |")
+        output.append(".---------.----------.-------.-------.--------.-------.---------.")
+        output.append("| Campo   |  funct7  |  rs2  |  rs1  | funct3 |  rd   | opcode  |")
+        output.append(".---------.----------.-------.-------.--------.-------.---------.")
+        output.append(f"| Bits    | {bits[0:7]}  | {bits[7:12]} | {bits[12:17]} |  {bits[17:20]}   | {bits[20:25]} | {bits[25:32]} |")
+        output.append(".---------.----------.-------.-------.--------.-------.---------.")
+
+    elif formato in ["I_aritmetico", "I_carga"]:
+        imm = (word >> 20) & 0xFFF
+        output.append(f"  * imm[11:0] (31-20) : {imm} (0b{bits[0:12]})")
+        output.append(f"  * rs1       (19-15) : x{rs1} ({bits[12:17]})")
+        output.append(f"  * funct3    (14-12) : 0x{funct3:x} ({bits[17:20]})")
+        output.append(f"  * rd        (11-7)  : x{rd} ({bits[20:25]})")
+        output.append(f"  * opcode    (6-0)   : 0x{opcode:02x} ({bits[25:32]})\n")
+
+        output.append(".---------.------------------.-------.--------.-------.---------.")
+        output.append("| Formato |      31-20       | 19-15 | 14-12  | 11-7  |   6-0   |")
+        output.append(".---------.------------------.-------.--------.-------.---------.")
+        output.append("| Campo   |    imm[11:0]     |  rs1  | funct3 |  rd   | opcode  |")
+        output.append(".---------.------------------.-------.--------.-------.---------.")
+        output.append(f"| Bits    |   {bits[0:12]}   | {bits[12:17]} |  {bits[17:20]}   | {bits[20:25]} | {bits[25:32]} |")
+        output.append(".---------.------------------.-------.--------.-------.---------.")
+
+    elif formato == "S":
+        imm_hi = (word >> 25) & 0x7F
+        imm_lo = (word >> 7) & 0x1F
+        imm = (imm_hi << 5) | imm_lo
+        output.append(f"  * imm[11:5] (31-25) : 0b{bits[0:7]}")
+        output.append(f"  * rs2       (24-20) : x{rs2} ({bits[7:12]})")
+        output.append(f"  * rs1       (19-15) : x{rs1} ({bits[12:17]})")
+        output.append(f"  * funct3    (14-12) : 0x{funct3:x} ({bits[17:20]})")
+        output.append(f"  * imm[4:0]  (11-7)  : 0b{bits[20:25]}")
+        output.append(f"  * Inmediato completo: {imm}")
+        output.append(f"  * opcode    (6-0)   : 0x{opcode:02x} ({bits[25:32]})\n")
+
+        output.append(".---------.----------.-------.-------.--------.-----------.---------.")
+        output.append("| Formato |  31-25   | 24-20 | 19-15 | 14-12  |   11-7    |   6-0   |")
+        output.append(".---------.----------.-------.-------.--------.-----------.---------.")
+        output.append("| Campo   | imm[11:5]|  rs2  |  rs1  | funct3 | imm[4:0]  | opcode  |")
+        output.append(".---------.----------.-------.-------.--------.-----------.---------.")
+        output.append(f"| Bits    | {bits[0:7]}  | {bits[7:12]} | {bits[12:17]} |  {bits[17:20]}   |   {bits[20:25]}   | {bits[25:32]} |")
+        output.append(".---------.----------.-------.-------.--------.-----------.---------.")
+
+    elif formato == "B":
+        imm_12 = (word >> 31) & 0x1
+        imm_10_5 = (word >> 25) & 0x3F
+        imm_4_1 = (word >> 8) & 0x0F
+        imm_11 = (word >> 7) & 0x1
+        imm = (imm_12 << 12) | (imm_11 << 11) | (imm_10_5 << 5) | (imm_4_1 << 1)
+        
+        output.append(f"  * imm[12|10:5] (31-25) : 0b{bits[0:7]} (bit 12: {bits[0]}, bits 10-5: {bits[1:7]})")
+        output.append(f"  * rs2          (24-20) : x{rs2} ({bits[7:12]})")
+        output.append(f"  * rs1          (19-15) : x{rs1} ({bits[12:17]})")
+        output.append(f"  * funct3       (14-12) : 0x{funct3:x} ({bits[17:20]})")
+        output.append(f"  * imm[4:1|11]  (11-7)  : 0b{bits[20:25]} (bits 4-1: {bits[20:24]}, bit 11: {bits[24]})")
+        output.append(f"  * Inmediato completo   : {imm} (con bit 0 en 0 implícito)")
+        output.append(f"  * opcode       (6-0)   : 0x{opcode:02x} ({bits[25:32]})\n")
+
+        output.append(".---------.---------------.-------.-------.--------.--------------.---------.")
+        output.append("| Formato |     31-25     | 24-20 | 19-15 | 14-12  |    11-7      |   6-0   |")
+        output.append(".---------.---------------.-------.-------.--------.--------------.---------.")
+        output.append("| Campo   | imm[12|10:5]  |  rs2  |  rs1  | funct3 | imm[4:1|11]  | opcode  |")
+        output.append(".---------.---------------.-------.-------.--------.--------------.---------.")
+        output.append(f"| Bits    |    {bits[0]}{bits[1:7]}    | {bits[7:12]} | {bits[12:17]} |  {bits[17:20]}   |    {bits[20:24]}{bits[24]}    | {bits[25:32]} |")
+        output.append(".---------.---------------.-------.-------.--------.--------------.---------.")
+
+    return "\n".join(output)
 
 def main():
     if len(sys.argv) != 2:
