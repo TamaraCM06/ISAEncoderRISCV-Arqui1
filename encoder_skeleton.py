@@ -87,10 +87,44 @@ def encode_instruction(instruction: str) -> int:
     investigarse en el manual oficial de la ISA RISC-V (ver referencia en
     la especificación) y documentarse en el README.
     """
-    # TODO: implementar. Sugerencia: parsear el mnemónico y los operandos,
-    # despachar según el formato (R/I/S/B), y ensamblar los campos con
-    # operaciones de bits.
-    raise NotImplementedError("encode_instruction: pendiente de implementar")
+    # Obtener los argumentos de la instruccion y guardar en variables que formaran la palabra
+    clean_instr = instruction.strip().replace(",", " ")
+    tokens = clean_instr.split()
+
+    if not tokens:
+        raise ValueError("Instrucción vacía")
+
+    #Tomar instruccion
+    mnemonico = tokens[0].lower()
+    if mnemonico not in instrucciones:
+        raise ValueError(
+            f"Mnemónico '{mnemonico}' no soportado. Debe ser uno de {SOPORTADAS}"
+        )
+
+    info = instrucciones[mnemonico]
+    formato = info["formato"]
+    opcode = info["opcode"]
+    funct3 = info["funct3"]
+
+    word = 0
+
+    if formato == "R":
+        print(f"Implementar formato R")
+
+    elif formato == "I_aritmetico":
+        print(f"Implementar formato I_aritmetico")
+
+    elif formato == "I_carga":
+        print(f"Implementar formato I_carga")
+
+    elif formato == "S":
+        print(f"Implementar formato S")
+
+
+    elif formato == "B":
+        print(f"Implementar formato B")
+
+    return word
 
 
 def explain_instruction(instruction: str, word: int) -> str:
