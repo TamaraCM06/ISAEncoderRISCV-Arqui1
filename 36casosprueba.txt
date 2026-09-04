@@ -1,0 +1,65 @@
+# ==============================================================================
+# VECTORES DE PRUEBA ENTREGABLES — CE4301 Arquitectura de Computadores I
+# Cobertura: 12 Instrucciones × 3 Casos (Positivo, Negativo, Límite)
+# Formato: <instruccion> ; 0x<8 digitos hex>
+# ==============================================================================
+
+# --- 1. add (Tipo R) ---
+add x1, x2, x3 ; 0x003100b3
+add x0, x0, x0 ; 0x00000033
+add x31, x30, x29 ; 0x01df0fb3
+
+# --- 2. sub (Tipo R) ---
+sub x10, x11, x12 ; 0x40c58533
+sub x0, x15, x15 ; 0x40f78033
+sub x31, x31, x31 ; 0x41ff8fb3
+
+# --- 3. and (Tipo R) ---
+and x5, x6, x7 ; 0x007372b3
+and x0, x31, x30 ; 0x01eff033
+and x31, x1, x2 ; 0x0020ffb3
+
+# --- 4. or (Tipo R) ---
+or x12, x13, x14 ; 0x00e6e633
+or x0, x0, x31 ; 0x01f06033
+or x31, x31, x0 ; 0x000fefb3
+
+# --- 5. addi (Tipo I Aritmético) ---
+addi x10, x11, 100 ; 0x06458513
+addi x5, x6, -500 ; 0xe0c30293
+addi x31, x31, 2047 ; 0x7fff8f93
+
+# --- 6. andi (Tipo I Aritmético) ---
+andi x15, x16, 255 ; 0x0ff87793
+andi x8, x9, -2048 ; 0x8004f413
+andi x31, x0, -1 ; 0xfff07f93
+
+# --- 7. lw (Tipo I Carga) ---
+lw x5, 12(x10) ; 0x00c52283
+lw x1, -1024(x2) ; 0xc0012083
+lw x31, 2047(x30) ; 0x7fff2f83
+
+# --- 8. lb (Tipo I Carga) ---
+lb x6, 4(x7) ; 0x00438303
+lb x2, -2048(x3) ; 0x80018103
+lb x31, -1(x31) ; 0xffff8f83
+
+# --- 9. sw (Tipo S) ---
+sw x5, 20(x10) ; 0x00552a23
+sw x31, -2048(x30) ; 0x81ff2023
+sw x1, 2047(x0) ; 0x7e102fa3
+
+# --- 10. sb (Tipo S) ---
+sb x8, 2(x9) ; 0x00848123
+sb x15, -128(x16) ; 0xf8f80023
+sb x31, -1(x31) ; 0xffff8fa3
+
+# --- 11. beq (Tipo B) ---
+beq x1, x2, 8 ; 0x00208463
+beq x5, x6, -100 ; 0xf8628ee3
+beq x31, x0, 4094 ; 0x7e0f8fe3
+
+# --- 12. bne (Tipo B) ---
+bne x10, x11, 16 ; 0x00b51863
+bne x20, x21, -4096 ; 0x815a1063
+bne x31, x31, -2 ; 0xffff9fe3
