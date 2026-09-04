@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import sys
 
 SOPORTADAS = ["add", "sub", "and", "or", "addi", "andi",
@@ -109,21 +110,83 @@ def encode_instruction(instruction: str) -> int:
     word = 0
 
     if formato == "R":
-        print(f"Implementar formato R")
+        # Formato de instruccion: op rd, rs1, rs2
+        rd = parse_reg(tokens[1])
+        rs1 = parse_reg(tokens[2])
+        rs2 = parse_reg(tokens[3])
+        funct7 = info["funct7"]
+        word = (
+            (funct7 << 25)
+            | (rs2 << 20)
+            | (rs1 << 15)
+            | (funct3 << 12)
+            | (rd << 7)
+            | opcode
+        )
 
     elif formato == "I_aritmetico":
-        print(f"Implementar formato I_aritmetico")
+        # Formato de instruccion: op rd, rs1, imm
+        rd = parse_reg(tokens[1])
+        rs1 = parse_reg(tokens[2])
+        imm = int(tokens[3], 0) & 0xFFF  # Inmediato 12 bits
+        word = (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
 
     elif formato == "I_carga":
-        print(f"Implementar formato I_carga")
-
+        # Direccionamiento con desplazamiento: op rd, imm(rs1)
+        rd = parse_reg(tokens[1])
+        match = re.match(r"^([^\(]+)\(([^\)]+)\)$", tokens[2])
+        if not match:
+            raise ValueError(
+                f"Sintaxis inválida para carga: '{tokens[2]}'. Esperado: imm(rs1)"
+            )
+        imm = int(match.group(1), 0) & 0xFFF
+        rs1 = parse_reg(match.group(2))
+        word = (imm << 20) | (rs1 << 15) | (funct3 << 12) | (rd << 7) | opcode
     elif formato == "S":
-        print(f"Implementar formato S")
+        # Direccionamiento con desplazamiento: op rs2, imm(rs1)
+        rs2 = parse_reg(tokens[1])
+        match = re.match(r"^([^\(]+)\(([^\)]+)\)$", tokens[2])
+        if not match:
+            raise ValueError(
+                f"Sintaxis inválida para store: '{tokens[2]}'. Esperado: imm(rs1)"
+            )
+        imm = int(match.group(1), 0) & 0xFFF
+        rs1 = parse_reg(match.group(2))
 
+        imm_11_5 = (imm >> 5) & 0x7F
+        imm_4_0 = imm & 0x1F
+
+        word = (
+            (imm_11_5 << 25)
+            | (rs2 << 20)
+            | (rs1 << 15)
+            | (funct3 << 12)
+            | (imm_4_0 << 7)
+            | opcode
+        )
 
     elif formato == "B":
-        print(f"Implementar formato B")
+        # Formato: op rs1, rs2, imm
+        rs1 = parse_reg(tokens[1])
+        rs2 = parse_reg(tokens[2])
+        imm = int(tokens[3], 0) & 0x1FFF  # Inmediato de 13 bits (bit 0 es 0)
 
+        imm_12 = (imm >> 12) & 0x1
+        imm_10_5 = (imm >> 5) & 0x3F
+        imm_4_1 = (imm >> 1) & 0x0F
+        imm_11 = (imm >> 11) & 0x1
+
+        word = (
+            (imm_12 << 31)
+            | (imm_10_5 << 25)
+            | (rs2 << 20)
+            | (rs1 << 15)
+            | (funct3 << 12)
+            | (imm_4_1 << 8)
+            | (imm_11 << 7)
+            | opcode
+        )
+        
     return word
 
 
